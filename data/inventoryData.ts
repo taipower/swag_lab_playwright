@@ -1,0 +1,14 @@
+export const inventoryData = {
+  items: [
+    {
+      name: 'Sauce Labs Backpack',
+      price: '$29.99',
+      quantity: '1'
+    },
+    {
+      name: 'Sauce Labs Bike Light',
+      price: '$9.99',
+      quantity: '1'
+    }
+  ]
+};

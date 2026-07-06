@@ -1,160 +1,117 @@
 import { test, expect } from '../fixtures/myFixture';
+import { cartData } from '../data/cartData';
+import { checkoutData } from '../data/checkoutData';
+import { inventoryData } from '../data/inventoryData';
 
 test.afterEach(async ({ page }, testInfo) => {
     if (testInfo.status !== testInfo.expectedStatus) {
         await page.screenshot({
             path: `test-results/${testInfo.title}.png`,
-            fullPage: true
+            fullPage: true,
         });
     }
 });
 
 test.describe('Shopping Cart Feature', () => {
-    test('Add and remove item to cart', async ({
-        page,
-        loggedInPage: _,
-        inventoryPage}) => {
-        await expect(page.locator('.title')).toHaveText('Products');
 
-        await inventoryPage.addBackpackClick();
-        await expect(page.locator('#remove-sauce-labs-backpack')).toBeVisible();
+    for (const data of cartData) {
 
-        await inventoryPage.addBikeLightClick();
-        await expect(page.locator('#remove-sauce-labs-bike-light')).toBeVisible();
+        test(data.title, async ({
+            page,
+            loggedInPage: _,
+            inventoryPage,
+            cartPage
+        }) => {
 
-        await expect(inventoryPage.itemNumber).toBeVisible();
-        await expect(inventoryPage.itemNumber).toHaveText('2', { timeout: 10000 });
+            await expect(page.locator('.title')).toHaveText('Products');
 
-        await inventoryPage.removeBackPackClick();
+            await inventoryPage.addItem();
 
-        await expect(inventoryPage.itemNumber).toBeVisible();
-        await expect(inventoryPage.itemNumber).toHaveText('1', { timeout: 10000 });
+            await expect(inventoryPage.itemNumber).toHaveText('2');
 
-        await page.screenshot({
-            path: 'screenshots/add_remove.png',
-            fullPage: true
+            if (data.remove) {
+                await inventoryPage.removeBackPackClick();
+                await expect(inventoryPage.itemNumber).toHaveText(data.afterRemoveItemCount);
+                return;
+            }
+
+            await cartPage.cartClick();
+
+            await expect(page.locator('.title')).toHaveText('Your Cart');
+
+            await expect(cartPage.qtyIndex(0)).toHaveText('1');
+            await expect(cartPage.qtyIndex(1)).toHaveText('1');
+
+            await inventoryPage.verifyItems(inventoryData.items);
         });
-    });
+    }
 
-    test('your cart', async ({
-        page,
-        loggedInPage: _,
-        inventoryPage,
-        cartPage}) => {
-        await expect(page.locator('.title')).toHaveText('Products');
+    for (const data of checkoutData) {
 
-        await inventoryPage.addBackpackClick();
-        await expect(page.locator('#remove-sauce-labs-backpack')).toBeVisible();
+        test('Checkout Process', async ({
+            page,
+            loggedInPage: _,
+            inventoryPage,
+            cartPage,
+            checkoutPage
+        }) => {
 
-        await inventoryPage.addBikeLightClick();
-        await expect(page.locator('#remove-sauce-labs-bike-light')).toBeVisible();
+            await inventoryPage.addItem();
 
-        await cartPage.cartClick();
-        await expect(page.locator('.title')).toHaveText('Your Cart');
+            await cartPage.cartClick();
 
-        const firstQty = cartPage.qtyIndex(0);
-        const secondQty = cartPage.qtyIndex(1);
+            await checkoutPage.checkoutClick();
 
-        const firstItemName = inventoryPage.itemNameIndex(0);
-        const secondItemName = inventoryPage.itemNameIndex(1);
+            await expect(page.locator('.title'))
+                .toHaveText('Checkout: Your Information');
 
-        await expect(firstQty).toHaveText('1');
-        await expect(secondQty).toHaveText('1');
+            await checkoutPage.firstNameFieldFill(data.customer.firstName);
+            await checkoutPage.lastNameFieldFill(data.customer.lastName);
+            await checkoutPage.zipcodeFieldFill(data.customer.zipCode);
 
-        await expect(firstItemName).toHaveText('Sauce Labs Backpack');
-        await expect(secondItemName).toHaveText('Sauce Labs Bike Light');
+            await checkoutPage.continueBtnClick();
 
-        await expect(cartPage.backpackPrice).toHaveText('$29.99');
-        await expect(cartPage.bikeLightPrice).toHaveText('$9.99');
+            await expect(page.locator('.title'))
+                .toHaveText('Checkout: Overview');
 
-        await page.screenshot({
-            path: 'screenshots/youir_cart.png',
-            fullPage: true
+            await expect(checkoutPage.shippingInfo)
+                .toHaveText(data.summary.shipping);
+
+            await expect(checkoutPage.totalPrice)
+                .toHaveText(data.summary.subtotal);
+
+            await expect(checkoutPage.tax)
+                .toHaveText(data.summary.tax);
+
+            await expect(checkoutPage.total)
+                .toHaveText(data.summary.total);
+
+            await checkoutPage.finishBtnClick();
+
+            await expect(page.locator('.title'))
+                .toHaveText('Checkout: Complete!');
+
+            await checkoutPage.backToHomeClick();
+
+            await expect(page.locator('.title'))
+                .toHaveText('Products');
         });
-    });
+    }
 
     test('Remove item on cart page', async ({
         page,
         loggedInPage: _,
         inventoryPage,
-        cartPage}) => {
-        await expect(page.locator('.title')).toHaveText('Products');
+        cartPage
+    }) => {
 
-        await inventoryPage.addBackpackClick();
-        await expect(page.locator('#remove-sauce-labs-backpack')).toBeVisible();
-
-        await inventoryPage.addBikeLightClick();
-        await expect(page.locator('#remove-sauce-labs-bike-light')).toBeVisible();
+        await inventoryPage.addItem();
 
         await cartPage.cartClick();
-        await expect(page.locator('.title')).toHaveText('Your Cart');
 
-        cartPage.removeBackPackClick();
+        await cartPage.removeBackPackClick();
 
         await expect(cartPage.backpackItem).toBeHidden();
-
-        await page.screenshot({
-            path: 'screenshots/remove.png',
-            fullPage: true
-        });
     });
 
-    test('Checkout process', async ({
-        page,
-        loggedInPage: _,
-        inventoryPage,
-        cartPage,
-        checkoutPage}) => {
-        await expect(page.locator('.title')).toHaveText('Products');
-
-        await inventoryPage.addBackpackClick();
-        await expect(page.locator('#remove-sauce-labs-backpack')).toBeVisible();
-
-        await inventoryPage.addBikeLightClick();
-        await expect(page.locator('#remove-sauce-labs-bike-light')).toBeVisible();
-
-        await cartPage.cartClick();
-        await expect(page.locator('.title')).toHaveText('Your Cart');
-
-        await checkoutPage.checkoutClick();
-        await expect(page.locator('.title')).toHaveText('Checkout: Your Information');
-
-        await checkoutPage.firstNameFieldFill('Wichian');
-        await checkoutPage.lastNameFieldFill('Chotwattana');
-        await checkoutPage.zipcodeFieldFill('10260');
-
-        checkoutPage.continueBtnClick();
-        await expect(page.locator('.title')).toHaveText('Checkout: Overview');
-
-        const firstQty = cartPage.qtyIndex(0);
-        const secondQty = cartPage.qtyIndex(1);
-
-        const firstItemName = inventoryPage.itemNameIndex(0);
-        const secondItemName = inventoryPage.itemNameIndex(1);
-
-        await expect(firstQty).toHaveText('1');
-        await expect(secondQty).toHaveText('1');
-
-        await expect(firstItemName).toHaveText('Sauce Labs Backpack');
-        await expect(secondItemName).toHaveText('Sauce Labs Bike Light');
-
-        await expect(cartPage.backpackPrice).toHaveText('$29.99');
-        await expect(cartPage.bikeLightPrice).toHaveText('$9.99');
-
-        await expect(checkoutPage.shippingInfo).toHaveText('Free Pony Express Delivery!');
-        await expect(checkoutPage.totalPrice).toHaveText('Item total: $39.98');
-        await expect(checkoutPage.tax).toHaveText('Tax: $3.20');
-        await expect(checkoutPage.total).toHaveText('Total: $43.18');
-
-        checkoutPage.finishBtnClick();
-        await expect(page.locator('.title')).toHaveText('Checkout: Complete!');
-
-        checkoutPage.backToHomeClick();
-        await expect(page.locator('.title')).toHaveText('Products');
-
-        await page.screenshot({
-            path: 'screenshots/checkout.png',
-            fullPage: true
-        });
-    });
-})
+});

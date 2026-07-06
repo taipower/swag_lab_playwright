@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import { Page,expect } from "@playwright/test";
 
 export class InventoryPage {
     constructor(private page: Page) {}
@@ -59,4 +59,17 @@ export class InventoryPage {
     itemPriceIndex(index: number) {
         return this.itemPrice.nth(index);
     }
+
+    async verifyItems(items: InventoryItem[]) {
+        for (const [index, item] of items.entries()) {
+            await expect(this.itemNameIndex(index)).toHaveText(item.name);
+            await expect(this.itemPriceIndex(index)).toHaveText(item.price);
+        }
+    }
+}
+
+export interface InventoryItem {
+    name: string;
+    price: string;
+    quantity: string;
 }
